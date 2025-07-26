@@ -1,0 +1,38 @@
+name: Render & send weekly Twitter report
+
+on:
+  schedule:
+    # every Monday at 09:15 UTC – adjust as needed
+    - cron:  '15 9 * * 1'
+  workflow_dispatch:
+    inputs:
+      week_start:
+        description: 'Override Monday date (YYYY‑MM‑DD)'
+        required: false
+        default: ''
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    env:
+      SUPABASE_URL:          ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE: ${{ secrets.SUPABASE_SERVICE_ROLE }}
+      MJ_API_KEY:            ${{ secrets.MJ_API_KEY }}
+      MJ_API_SECRET:         ${{ secrets.MJ_API_SECRET }}
+      MAIL_FROM:             ${{ vars.MAIL_FROM }}
+      MAIL_TO:               ${{ vars.MAIL_TO }}
+      WEEK_START:            ${{ github.event.inputs.week_start || '' }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up system deps
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends \
+             ghostscript libssl-dev libxml2-dev libcurl4-openssl-dev
+
+      - name: Set up R
+        uses: r-lib/actions/setup-r@v2
+
+      - name: Install R packages & run script
+        run: Rscript run_weekly_sentiment.R
