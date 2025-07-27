@@ -2,18 +2,18 @@ name: Weekly Twitter Sentiment Report
 
 on:
   schedule:
-    - cron: '30 8 * * MON'          # every Monday 08:30 UTC
-  workflow_dispatch:                # manual trigger
+    - cron: '30 8 * * MON'          # every Monday, 08:30 UTC
+  workflow_dispatch:                # manual “Run‑workflow” button
 
 jobs:
   build-report:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Checkout repository
+      # 1 Checkout repo
       - uses: actions/checkout@v4
 
-      # 2. System libraries required by various R packages
+      # 2 System libraries required by some R packages + pagedown
       - name: Install system libraries
         run: |
           sudo apt-get update
@@ -23,29 +23,22 @@ jobs:
             libxml2-dev \
             libcurl4-openssl-dev
 
-      # 3. Set up R
+      # 3 Set up R
       - uses: r-lib/actions/setup-r@v2
 
-      # 4. Install / restore R packages
-      - uses: r-lib/actions/setup-r-dependencies@v2
-        with:
-          extra-packages: |
-            tidyverse
-            pagedown
-
-      # 5. Run the weekly report pipeline
+      # 4 Run the weekly pipeline
       - name: Run weekly sentiment script
         env:
           SUPABASE_URL:          ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE: ${{ secrets.SUPABASE_SERVICE_ROLE }}
           MJ_API_KEY:            ${{ secrets.MJ_API_KEY }}
           MJ_API_SECRET:         ${{ secrets.MJ_API_SECRET }}
-          MAIL_FROM:             ${{ vars.MAIL_FROM }}
-          MAIL_TO:               ${{ vars.MAIL_TO }}
+          MAIL_FROM:             ${{ vars.MAIL_FROM }}   # e.g. "Sentiment Bot <bot@example.com>"
+          MAIL_TO:               ${{ vars.MAIL_TO }}     # destination address
         run: |
           Rscript run_weekly_sentiment.R
 
-      # 6. Save PDF/HTML as artifacts (optional, but handy)
+      # 5 (Optional) archive the generated PDF + HTML
       - name: Upload report artifacts
         if: always()
         uses: actions/upload-artifact@v4
