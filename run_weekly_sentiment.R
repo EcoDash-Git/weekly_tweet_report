@@ -70,16 +70,22 @@ rmarkdown::render(
   quiet       = TRUE
 )
 
-## ── 3.  chrome‑print HTML → PDF ───────────────────────────────────────────
-chrome_path <- Sys.getenv("CHROME_BIN", pagedown::find_chrome())
-cat("Using Chrome at:", chrome_path, "\n")
+## ── 3. HTML → PDF (pagedown) ───────────────────────────────────────────────
+chrome_path <- Sys.getenv("CHROME_BIN")
+if (!nzchar(chrome_path)) chrome_path <- pagedown::find_chrome()
+
+extra <- c("--headless=new",        # ← modern flag (Chrome ≥122)
+           "--disable-gpu",
+           "--no-sandbox")
 
 pagedown::chrome_print(
-  input   = HTML_OUT,
-  output  = PDF_OUT,
-  browser = chrome_path,
-  extra_args = "--no-sandbox"
+  input      = HTML_OUT,
+  output     = PDF_OUT,
+  browser    = chrome_path,
+  extra_args = extra,
+  timeout    = 20000              # optional: wait up to 20 s
 )
+
 
 if (!file.exists(PDF_OUT))
   stop("❌ PDF not generated – ", PDF_OUT, " missing")
