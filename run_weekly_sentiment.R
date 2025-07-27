@@ -113,13 +113,17 @@ resp <- request(upload_url) |>
 stopifnot(resp_status(resp) < 300)
 cat("✔ Uploaded to Supabase:", object_path, "\n")
 
-## ── 5.  email via Mailjet ─────────────────────────────────────────────────
-from_email <- if (str_detect(MAIL_FROM, "<.+@.+>"))
-  str_remove_all(str_extract(MAIL_FROM, "<.+@.+>"), "[<>]")
-else MAIL_FROM
-from_name  <- if (str_detect(MAIL_FROM, "<.+@.+>"))
-  str_trim(str_remove(MAIL_FROM, "<.+@.+>$"))
-else "Sentiment Bot"
+## ── 5. Email the PDF via Mailjet ────────────────────────────────────────────
+## Wrap the *whole* if/else in braces so R never trips over the `else`
+## (the logic is identical to what you already had).
+
+if (str_detect(MAIL_FROM, "<.+@.+>")) {
+  from_email <- str_remove_all(str_extract(MAIL_FROM, "<.+@.+>"), "[<>]")
+  from_name  <- str_trim(str_remove(MAIL_FROM, "<.+@.+>$"))
+} else {
+  from_email <- MAIL_FROM
+  from_name  <- "Sentiment Bot"
+}
 
 mj_resp <- request("https://api.mailjet.com/v3.1/send") |>
   req_auth_basic(MJ_API_KEY, MJ_API_SECRET) |>
@@ -127,23 +131,26 @@ mj_resp <- request("https://api.mailjet.com/v3.1/send") |>
     Messages = list(list(
       From        = list(Email = from_email, Name = from_name),
       To          = list(list(Email = MAIL_TO)),
-      Subject     = sprintf("Weekly Sentiment Report – %s to %s",
-                            format(week_start,"%d %b %Y"),
-                            format(week_end,"%d %b %Y")),
+      Subject     = sprintf(
+        "Weekly Sentiment Report – %s to %s",
+        format(week_start, "%d %b %Y"),
+        format(week_end,   "%d %b %Y")
+      ),
       TextPart    = "Attached is the weekly Twitter sentiment report.",
       Attachments = list(list(
         ContentType   = "application/pdf",
-        Filename      = file_name,
+        Filename      = file_name,                # <- from step 4
         Base64Content = base64enc::base64encode(PDF_OUT)
       ))
     ))
   )) |>
   req_perform()
 
-if (resp_status(mj_resp) >= 300){
+if (resp_status(mj_resp) >= 300) {
   cat("Mailjet error body:\n",
       resp_body_string(mj_resp, encoding = "UTF-8"), "\n")
-  stop("❌ Mailjet returned status ", resp_status(mj_resp))
+  stop("❌ Mailjet returned status ", resp_status(mj_resp))
 }
 
-cat("📧  Mailjet response OK — report emailed\n")
+cat("📧  Mailjet response OK — report emailed\n")
+
