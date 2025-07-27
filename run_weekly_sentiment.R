@@ -113,10 +113,9 @@ resp <- request(upload_url) |>
 stopifnot(resp_status(resp) < 300)
 cat("✔ Uploaded to Supabase:", object_path, "\n")
 
-## ── 5. Email the PDF via Mailjet ────────────────────────────────────────────
-## Wrap the *whole* if/else in braces so R never trips over the `else`
-## (the logic is identical to what you already had).
+## ── 5. Email the PDF via Mailjet ───────────────────────────────────────────
 
+# ❶ Who is the message “from”?
 if (str_detect(MAIL_FROM, "<.+@.+>")) {
   from_email <- str_remove_all(str_extract(MAIL_FROM, "<.+@.+>"), "[<>]")
   from_name  <- str_trim(str_remove(MAIL_FROM, "<.+@.+>$"))
@@ -125,6 +124,7 @@ if (str_detect(MAIL_FROM, "<.+@.+>")) {
   from_name  <- "Sentiment Bot"
 }
 
+# ❷ Build & send the request
 mj_resp <- request("https://api.mailjet.com/v3.1/send") |>
   req_auth_basic(MJ_API_KEY, MJ_API_SECRET) |>
   req_body_json(list(
@@ -139,18 +139,20 @@ mj_resp <- request("https://api.mailjet.com/v3.1/send") |>
       TextPart    = "Attached is the weekly Twitter sentiment report.",
       Attachments = list(list(
         ContentType   = "application/pdf",
-        Filename      = file_name,                # <- from step 4
+        Filename      = file_name,                # defined in step 4
         Base64Content = base64enc::base64encode(PDF_OUT)
       ))
     ))
   )) |>
   req_perform()
 
+# ❸ Check Mailjet’s response
 if (resp_status(mj_resp) >= 300) {
   cat("Mailjet error body:\n",
       resp_body_string(mj_resp, encoding = "UTF-8"), "\n")
   stop("❌ Mailjet returned status ", resp_status(mj_resp))
 }
 
-cat("📧  Mailjet response OK — report emailed\n")
+cat("📧 Mailjet response OK — report emailed\n")
+
 
