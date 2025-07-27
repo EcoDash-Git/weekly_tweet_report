@@ -8,14 +8,28 @@
 # * Emails the PDF via Mailjet
 # ---------------------------------------------------------------------------
 
-## ── 0.  packages ───────────────────────────────────────────────────────────
-pkgs <- c("tidyverse", "jsonlite", "httr2", "rmarkdown", "pagedown",
-          "DBI", "RPostgres", "base64enc")
-invisible(lapply(pkgs, \(p){
-  if (!requireNamespace(p, quietly = TRUE))
+## ── 0. Packages ─────────────────────────────────────────────────────────────
+required <- c(
+  # tidy data / plotting
+  "tidyverse", "tidytext", "lubridate", "stringi", "kableExtra",
+  "forcats", "widyr", "ggraph", "igraph",
+  # tables & data wrangling
+  "data.table",
+  # text‑analytics
+  "sentimentr",
+  # report generation
+  "rmarkdown", "pagedown", "knitr",
+  # API / I/O
+  "jsonlite", "httr2", "DBI", "RPostgres", "base64enc"
+)
+
+invisible(lapply(required, \(p){
+  if (!requireNamespace(p, quietly = TRUE)) {
     install.packages(p, quiet = TRUE)
+  }
   library(p, character.only = TRUE)
 }))
+
 
 `%||%` <- function(a,b){
   if (isTRUE(is.na(a)) || (is.character(a) && !nzchar(a))) b else a
