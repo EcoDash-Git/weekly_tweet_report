@@ -1,38 +1,71 @@
-name: Render & send weekly Twitter report
+name: Weekly Twitter Sentiment Report
 
+# ────────────────────────────────────────────────────────────────
+# Triggers
+# • Every Monday at 08:30 UTC
+# • Or manual “Run workflow” button
+# ────────────────────────────────────────────────────────────────
 on:
   schedule:
-    # every Monday at 09:15 UTC – adjust as needed
-    - cron:  '15 9 * * 1'
-  workflow_dispatch:
-    inputs:
-      week_start:
-        description: 'Override Monday date (YYYY‑MM‑DD)'
-        required: false
-        default: ''
+    - cron: '30 8 * * MON'          # adjust if you prefer a different time
+  workflow_dispatch:                # manual trigger
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
+  build-report:
+    runs-on: ubuntu-latest          # Ubuntu 22.04 GitHub runner
 
     env:
-      SUPABASE_URL:          ${{ secrets.SUPABASE_URL }}
-      SUPABASE_SERVICE_ROLE: ${{ secrets.SUPABASE_SERVICE_ROLE }}
-      MJ_API_KEY:            ${{ secrets.MJ_API_KEY }}
-      MJ_API_SECRET:         ${{ secrets.MJ_API_SECRET }}
-      MAIL_FROM:             ${{ vars.MAIL_FROM }}
-      MAIL_TO:               ${{ vars.MAIL_TO }}
-      WEEK_START:            ${{ github.event.inputs.week_start || '' }}
+      # Tell R where to cache user‑installed packages
+      R_LIBS_USER: ${{ runners.cache }}/R
 
     steps:
+      # 1) Checkout your repository
       - uses: actions/checkout@v4
 
-      - name: Set up system deps
-        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends \
-             ghostscript libssl-dev libxml2-dev libcurl4-openssl-dev
+      # 2) OS‑level libraries needed by R packages & pagedown
+      - name: Install system libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            ghostscript \
+            libssl-dev \
+            libxml2-dev \
+            libcurl4-openssl-dev
 
-      - name: Set up R
-        uses: r-lib/actions/setup-r@v2
+      # 3) Set up R
+      - uses: r-lib/actions/setup-r@v2
 
-      - name: Install R packages & run script
-        run: Rscript run_weekly_sentiment.R
+      # 4) Install / restore R package dependencies (uses renv.lock if present,
+      #    otherwise installs on‑the‑fly inside your R script).
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          extra-packages: |
+            tidyverse
+            pagedown
+
+      # 5) Run the R pipeline that:
+      #    • renders weekly_tweet_report.Rmd
+      #    • prints it to PDF
+      #    • uploads to Supabase bucket “weekly‑sentiment”
+      #    • emails via Mailjet
+      - name: Run weekly sentiment script
+        env:
+          SUPABASE_URL:          ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE: ${{ secrets.SUPABASE_SERVICE_ROLE }}
+          MJ_API_KEY:            ${{ secrets.MJ_API_KEY }}
+          MJ_API_SECRET:         ${{ secrets.MJ_API_SECRET }}
+          MAIL_FROM:             ${{ vars.MAIL_FROM }}   # e.g. "Sentiment Bot <bot@example.com>"
+          MAIL_TO:               ${{ vars.MAIL_TO }}     # destination address
+          # REPORT_DATE not needed; week window is auto‑calculated inside the Rmd
+        run: |
+          Rscript run_weekly_sentiment.R
+
+      # 6) (Optional) keep the generated files as build artifacts
+      - name: Upload PDF/HTML artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: weekly‑sentiment‑report
+          path: |
+            *.pdf
+            *.html
