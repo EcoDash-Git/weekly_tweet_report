@@ -49,7 +49,7 @@ PDF_OUT  <- "weekly_tweet_report.pdf"
 
 SB_URL         <- Sys.getenv("SUPABASE_URL")
 SB_STORAGE_KEY <- Sys.getenv("SUPABASE_SERVICE_ROLE")
-SB_BUCKET      <- "weekly-sentiment"             # same bucket as daily
+SB_BUCKET      <- "weekly-numeric"             # same bucket as daily
 
 MJ_API_KEY    <- Sys.getenv("MJ_API_KEY")
 MJ_API_SECRET <- Sys.getenv("MJ_API_SECRET")
@@ -120,7 +120,7 @@ if (str_detect(MAIL_FROM, "<.+@.+>")) {
   from_name  <- str_trim(str_remove(MAIL_FROM, "<.+@.+>$"))
 } else {
   from_email <- MAIL_FROM
-  from_name  <- "Sentiment Bot"
+  from_name  <- "Numeric Bot"
 }
 
 mj_resp <- request("https://api.mailjet.com/v3.1/send") |>
@@ -130,11 +130,11 @@ mj_resp <- request("https://api.mailjet.com/v3.1/send") |>
       From        = list(Email = from_email, Name = from_name),
       To          = list(list(Email = MAIL_TO)),
       Subject     = sprintf(
-        "Weekly Sentiment Report – %s to %s",
+        "Weekly Numeric Report – %s to %s",
         format(week_start, "%d %b %Y"),
         format(week_end,   "%d %b %Y")
       ),
-      TextPart    = "Attached is the weekly Twitter sentiment report.",
+      TextPart    = "Attached is the weekly Twitter numeric report.",
       Attachments = list(list(
         ContentType   = "application/pdf",
         Filename      = file_name,                # <- from step 4
