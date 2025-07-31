@@ -17,7 +17,7 @@ jobs:
       # 2) System libraries required by some R packages + pagedown
       - name: Install system libraries
         run: |
-          sudo apt-get update
+          sudo apt-get update -y
           sudo apt-get install -y --no-install-recommends \
             ghostscript \
             libssl-dev libxml2-dev libcurl4-openssl-dev \
@@ -27,12 +27,22 @@ jobs:
       # 3) Install pandoc (needed by rmarkdown)
       - uses: r-lib/actions/setup-pandoc@v2
         with:
-          pandoc-version: '3.1.12.2'   # or omit to get the default
+          pandoc-version: '3.1.12.2'   # omit to use default
 
       # 4) Set up R
       - uses: r-lib/actions/setup-r@v2
+        with:
+          use-public-rspm: true        # faster CRAN installs
 
-      # 5) Run the weekly pipeline
+      # 5) Install a headless Chrome and expose its path  ← NEW
+      - name: Install headless Chrome
+        uses: browser-actions/setup-chrome@v2
+        with:
+          install-dependencies: true
+          chrome-version: stable        # or a specific version
+      - run: echo "CHROME_BIN=$CHROME_PATH" >> "$GITHUB_ENV"   # NEW
+
+      # 6) Run the weekly pipeline
       - name: Run weekly sentiment script
         env:
           SUPABASE_URL:          ${{ secrets.SUPABASE_URL }}
@@ -44,7 +54,7 @@ jobs:
         run: |
           Rscript run_weekly_sentiment.R
 
-      # 6) (Optional) archive the generated PDF + HTML
+      # 7) (Optional) archive the generated PDF + HTML
       - name: Upload report artifacts
         if: always()
         uses: actions/upload-artifact@v4
