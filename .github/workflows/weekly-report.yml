@@ -22,7 +22,9 @@ jobs:
             ghostscript \
             libssl-dev libxml2-dev libcurl4-openssl-dev \
             libfontconfig1-dev libfreetype6-dev libharfbuzz-dev libfribidi-dev \
-            libpng-dev libtiff5-dev
+            libpng-dev libtiff5-dev \
+            libglpk-dev            # ← NEW: supplies libglpk.so.40
+
 
       # 3) Install pandoc (needed by rmarkdown)
       - uses: r-lib/actions/setup-pandoc@v2
