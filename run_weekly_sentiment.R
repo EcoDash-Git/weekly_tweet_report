@@ -48,8 +48,8 @@ RMD_FILE <- "weekly_tweet_report.Rmd"
 HTML_OUT <- "weekly_tweet_report.html"
 PDF_OUT  <- "weekly_tweet_report.pdf"
 
-# Supabase storage
-SB_URL         <- Sys.getenv("SUPABASE_URL")
+# Supabase storage (trim any trailing slash)
+SB_URL         <- sub("/+$","", Sys.getenv("SUPABASE_URL"))
 SB_STORAGE_KEY <- Sys.getenv("SUPABASE_SERVICE_ROLE")
 SB_BUCKET      <- "weekly-numeric"   # adjust if you use a different bucket
 
@@ -61,10 +61,7 @@ MAIL_TO       <- Sys.getenv("MAIL_TO")
 
 # Require Supabase creds always (we still upload), Mailjet only if emailing
 stopifnot(SB_URL != "", SB_STORAGE_KEY != "")
-
-if (SEND_EMAIL) {
-  stopifnot(MJ_API_KEY != "", MJ_API_SECRET != "", MAIL_FROM != "", MAIL_TO != "")
-}
+if (SEND_EMAIL) stopifnot(MJ_API_KEY != "", MJ_API_SECRET != "", MAIL_FROM != "", MAIL_TO != "")
 
 ## ── 2.  knit Rmd → HTML ───────────────────────────────────────────────────
 rmarkdown::render(
@@ -102,7 +99,7 @@ upload_url <- sprintf("%s/storage/v1/object/%s/%s?upload=1",
                       SB_URL, SB_BUCKET, object_path)
 
 resp <- httr2::request(upload_url) |>
-  httr2::req_method("POST") ||
+  httr2::req_method("POST") |>
   httr2::req_headers(
     Authorization  = sprintf("Bearer %s", SB_STORAGE_KEY),
     `x-upsert`     = "true",
